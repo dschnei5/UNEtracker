@@ -274,6 +274,7 @@ write.csv(AllDataOut.df,file = paste0(getwd(),"/Output/AllCollarsCleaned.csv"));
 print("Creating Output Shapefile...");
 Sys.sleep(2);
 suppressWarnings(dir.create(paste0(getwd(),"/Output/Shapefiles")));
+
 AllDataOut2.df <- AllDataOut.df;
 coordinates(AllDataOut2.df) <- c("X","Y")
 proj4string(AllDataOut2.df) <- UCRS.new
@@ -286,6 +287,7 @@ print(" End Script - Auto close in 5 secs...")
 #leaflet(AllDataOut2.df) %>%
   #addProviderTiles(providers$Esri.WorldImagery) %>% addMarkers()
   #addMarkers(clusterOptions = markerClusterOptions()) %>% saveas(paste0(getwd(),"/Output/YourNewLeafletMap.html"))
+
 
 
 
