@@ -12,10 +12,21 @@
 
 library(lubridate);
 library(rgdal);
+library(tcltk);
+
+####Functions####
+
+choose_directory = function(caption = 'Select data directory') {
+  if (exists('utils::choose.dir')) {
+    choose.dir(caption = caption) 
+  } else {
+    tk_choose.dir(caption = caption)
+  }
+}
 
 ####Import Data####
 
-setwd(choose.dir(default = "C:\\R\\2018-10-03_GPSdataProcessingFix\\", caption = "Choose location containing only raw tracking text files"));  ###Location of Raw Tracking .TXT Files###
+setwd(choose_directory(caption = "Choose location containing only raw tracking text files"));  ###Location of Raw Tracking .TXT Files###
 files <- list.files(getwd(), pattern = ".txt", ignore.case = TRUE);
 dname <- vector('list',2);
 

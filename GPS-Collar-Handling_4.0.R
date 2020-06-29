@@ -40,23 +40,49 @@
 
 library(lubridate);
 library(rgdal);
+library(tcltk);
 
-#####Add functions for later####
+####Functions####
 
+choose_directory = function(caption = 'Select data directory') {
+  if (exists('utils::choose.dir')) {
+    choose.dir(caption = caption) 
+  } else {
+    tk_choose.dir(caption = caption)
+  }
+}
 as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
+tm.correction <- function(x,y) {
+  if (as_datetime(x, tz = "AEST") < ymd_hms("2018-01-01 00:00:00", tz = "Australia/Brisbane")) {
+    z <- as_datetime(x, tz = "AEST") 
+    out <- z + y
+    } else {out <- as_datetime(x, tz = "AEST")}
+  return(out)
+};
+
+####Y2K + 20 Bug Fix####
+
+#Seemingly when the collars get to "2019-04-06 20:39:45 GMT" they revert to "1999-08-22 00:32:44 GMT"
+# This is a time difference of -7167.838 days, this can be refined here:
+tm.diff <- make_difftime(day = 7167.838, units = "days")
+
 
 ####Set WD and check for data####
 
 message("Choose your data directory to begin...");
 Sys.sleep(2);
-setwd(choose.dir(default = "C:/Data5/Livestock_Tracking/GPS_Tracking_Data/", caption = "Choose location containing only raw tracking text files"));  ###Location of Raw Tracking .TXT Files###
+setwd(choose_directory(caption = "Choose location containing only raw tracking text files"));  ###Location of Raw Tracking .TXT Files###
 print(paste("Working Directory Is:", getwd()));
 files <- list.files(getwd(), pattern = ".txt", ignore.case = TRUE);
 dname <- vector('list',2);
 print(paste("There are", length(files), "collar files to process"));
-
 Sys.sleep(2);
-
+print("Creating Output Directory...");
+Sys.sleep(2);
+if (!dir.exists(paste0(getwd(),"/Output"))) {
+dir.create(paste0(getwd(),"/Output")); 
+  print("Success!")
+} else {warning("Output directory previously existed, data may have been overwritten!")}
 ####Set your projection####
 
 message("This script will use: WGS 1984 and UTM");
@@ -83,7 +109,7 @@ error.log <- data.frame(File = NA,
                         stringsAsFactors = FALSE);
 
 for (i in seq(along=files)) {
-  #i=3
+  #i=2
   {dname[i] <- paste("data",i, sep = ".");
   suppressWarnings(assign(dname[[i]], read.csv(files[i], header = FALSE)));
   tmp1.df <- get(dname[[i]]);
@@ -120,6 +146,8 @@ for (i in seq(along=files)) {
       tmp2.df <- tmp2.df[,-(9)];
       colnames(tmp2.df) <- c("UTC_Time","Lat","Long","Fix","Satellites","HDOP","Altitude","UTC_Date", "UTC_DateTime");
       tmp2.df$EST_DateTime <- with_tz(tmp2.df$UTC_DateTime,"Australia/Brisbane");
+      tmp2.df$EST_DateTime <- apply(X = as.array(tmp2.df$EST_DateTime), MARGIN = 1, FUN = tm.correction, y = tm.diff);
+      tmp2.df$EST_DateTime <- as_datetime(tmp2.df$EST_DateTime, tz = "AEST")
       tmp2.df$EST_Hour <- hour(tmp2.df$EST_DateTime);
       suppressWarnings(tmp2.df$SecInt <- tmp2.df$UTC_DateTime[-1] - tmp2.df$UTC_DateTime);
       tmp2.df$SecInt <- as.numeric(tmp2.df$SecInt);
@@ -166,8 +194,8 @@ AllDataOut.df <- data.frame();
 for (j in seq(along=files.out)) {
   
   tmp3.df <- get(files.out[[j]]);
-  write.csv(tmp3.df,paste0(getwd(),"/", files[j],".CSV"));
+  write.csv(tmp3.df,paste0(getwd(),"/Output/", sub(pattern = ".TXT",replacement = "", x = files[j], ignore.case = TRUE),".CSV"));
   AllDataOut.df <- rbind(AllDataOut.df,get(files.out[[j]]));
 }; # End j loop
 
-write.csv(AllDataOut.df,file = paste0(getwd(),"/AllCollarsUncleaned.CSV"));
+write.csv(AllDataOut.df,file = paste0(getwd(),"/Output/AllCollarsUncleaned.CSV"));
