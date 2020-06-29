@@ -41,6 +41,7 @@
 library(lubridate);
 library(rgdal);
 library(tcltk);
+library(leaflet);
 
 ####Functions####
 
@@ -56,7 +57,7 @@ tm.correction <- function(x,y) {
   if (as_datetime(x, tz = "AEST") < ymd_hms("2018-01-01 00:00:00", tz = "Australia/Brisbane")) {
     z <- as_datetime(x, tz = "AEST") 
     out <- z + y
-    } else {out <- as_datetime(x, tz = "AEST")}
+  } else {out <- as_datetime(x, tz = "AEST")}
   return(out)
 };
 gps.processor <- function(x) {
@@ -71,7 +72,7 @@ gps.processor <- function(x) {
                                            ifelse(tmp2.df$UTC_Time <= 99999.99, paste0("0", tmp2.df$UTC_Time),
                                                   tmp2.df$UTC_Time))));
   if(is.factor(tmp2.df$UTC_Date)){
-  tmp2.df$UTC_Date <- suppressWarnings(as.numeric.factor(tmp2.df$UTC_Date));
+    tmp2.df$UTC_Date <- suppressWarnings(as.numeric.factor(tmp2.df$UTC_Date));
   };
   tmp2.df$UTC_Date <- ifelse(tmp2.df$UTC_Date < 99999, paste0("0",tmp2.df$UTC_Date), tmp2.df$UTC_Date);
   tmp2.df <- cbind(tmp2.df, as.character(paste(tmp2.df$UTC_Date,tmp2.df$UTC_Time)));
@@ -114,6 +115,12 @@ gps.processor <- function(x) {
   tmp2.df$CollarID <- i;
   assign(dname[[i]],tmp2.df, envir = .GlobalEnv);
 }
+saveas <- function(map, file){
+  class(map) <- c("saveas",class(map))
+  attr(map,"filesave")=file
+  map
+}
+
 
 ####Y2K + 20 Bug Fix####
 
@@ -135,7 +142,7 @@ Sys.sleep(2);
 print("Creating Output Directory...");
 Sys.sleep(2);
 if (!dir.exists(paste0(getwd(),"/Output"))) {
-dir.create(paste0(getwd(),"/Output")); 
+  dir.create(paste0(getwd(),"/Output")); 
   print("Success!")
 } else {warning("Output directory previously existed, data may have been overwritten!")}
 ####Set your projection####
@@ -174,15 +181,15 @@ for (i in seq(along=files)) {
   if (dim(RMC.tmp)[1] == 0) {
     message(paste("File", files[i], "has no data, skipping file..."));
     rm(list = dname[[i]]);
-    error.log[i,] <- c(files[i],"ha no data");
+    error.log[i,] <- c(files[i],"has no data");
   } else if (dim(GGA.tmp)[1] != dim(RMC.tmp)[1]) {
-    message(paste("File", files[i], "has varying lengths of GGA and RMC records or no data, attempting to fix..."));
+    message(paste("File", files[i], "has varying lengths of GGA and RMC, attempting to fix..."));
     Sys.sleep(1);
     tmp1.df <- merge(GGA.tmp,RMC.tmp,"V2")
     if (length(tmp1.df) != 29) {
       rm(list = dname[[i]]);
       error.log[i,] <- c(files[i],"varying lengths of GGA and RMC records, fix failed");
-      } else {
+    } else {
       tmp1.df <- tmp1.df[,c(2,1,3:16,1,17:29)]
       tmp1.df[,3] <- suppressWarnings(as.numeric.factor(tmp1.df[,3]))
       tmp1.df[,19] <- suppressWarnings(as.numeric.factor(tmp1.df[,19]))
@@ -191,8 +198,8 @@ for (i in seq(along=files)) {
       error.log[i,] <- c(files[i],"varying lengths of GGA and RMC records fixed, some data lost");
       message(paste0("File ",files[i],"'s varying lengths of GGA and RMC records fixed, some data lost"))
       gps.processor(tmp1.df)
-      }
-    } else {
+    }
+  } else {
     print(paste("File",files[i], "Successfully Imported"));
     error.log[i,] <- c(files[i],"Successfully Imported")
     tmp1.df <- cbind(GGA.tmp, RMC.tmp);
@@ -204,22 +211,82 @@ for (i in seq(along=files)) {
       gps.processor(tmp1.df)
     }
   }
-  }# End of i loop
+}# End of i loop
 
 
 rm(tmp1.df,GGA.tmp,RMC.tmp,dname,i);
 
-####Create Output DF####
+####Create and Export Output####
 
 files.out <- ls();
 files.out <- files.out[grepl("data.",files.out)];
 AllDataOut.df <- data.frame();
 
 for (j in seq(along=files.out)) {
-  
   tmp3.df <- get(files.out[[j]]);
-  write.csv(tmp3.df,paste0(getwd(),"/Output/", sub(pattern = ".TXT",replacement = "", x = files[j], ignore.case = TRUE),".CSV"));
+  write.csv(tmp3.df,paste0(getwd(),"/Output/", sub(pattern = ".TXT",replacement = "", x = files[j], ignore.case = TRUE),".csv"));
   AllDataOut.df <- rbind(AllDataOut.df,get(files.out[[j]]));
 }; # End j loop
+rm(j,tmp3.df);
 
-write.csv(AllDataOut.df,file = paste0(getwd(),"/Output/AllCollarsUncleaned.CSV"));
+message("Exporting Uncleaned and Cleaned Datasets to Output Directory...")
+write.csv(AllDataOut.df,file = paste0(getwd(),"/Output/AllCollarsUncleaned.csv"));
+write.csv(error.log, file = paste0(getwd(),"/Output/AllCollarsErrorLog.csv"));
+AllDataOut.df$Clip <- ifelse(AllDataOut.df$Speed > 3, NA, ifelse(AllDataOut.df$Speed<0,NA,1));
+AllDataOut.df <- AllDataOut.df[!is.na(AllDataOut.df$Clip),];
+AllDataOut.df$Clip <- NULL;
+message("...complete!");
+Sys.sleep(2);
+
+####Perform speed modelling####
+
+message("Performing speed modelling...");
+bins <- c(0,0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,2,3);
+bins2 <- c(0,0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,2);
+Speed.ms <- AllDataOut.df$Speed;
+Speed.hist <- hist(Speed.ms, breaks=bins, plot=FALSE);
+x11(width = 10, height = 7.5);
+bp <- barplot(Speed.hist$counts, log="y", col="white", names.arg=bins2);
+text(bp, Speed.hist$counts, labels=Speed.hist$counts, pos=3, cex=0.5);
+rm(bins,bins2,Speed.hist,Speed.ms,bp);
+
+con <- if (interactive()) stdin() else file('stdin');
+message("Select your camping threshold:");
+message(paste0("[",seq(0.01,0.05,0.01),"]",sep="\n"))
+thresh1 <- scan(file=con, sep=',', nlines=1, what = 'integer', quiet=TRUE);
+thresh1 <- as.numeric(thresh1);
+
+con <- if (interactive()) stdin() else file('stdin');
+message("Select your travelling threshold:");
+message(paste0("[",seq(0.1,1.0,0.1),"]",sep="\n"))
+thresh2 <- scan(file=con, sep=',', nlines=1, what = 'integer', quiet=TRUE);
+thresh2 <- as.numeric(thresh2);
+rm(con)
+
+dev.off();
+
+AllDataOut.df$Behaviour <- ifelse(AllDataOut.df$Speed < thresh1, "Camping", ifelse(AllDataOut.df$Speed > thresh2, "Travelling","Grazing"));
+
+write.csv(AllDataOut.df,file = paste0(getwd(),"/Output/AllCollarsCleaned.csv"));
+
+####Create Shapefile and Export####
+
+print("Creating Output Shapefile...");
+Sys.sleep(2);
+suppressWarnings(dir.create(paste0(getwd(),"/Output/Shapefiles")));
+AllDataOut2.df <- AllDataOut.df;
+coordinates(AllDataOut2.df) <- c("X","Y")
+proj4string(AllDataOut2.df) <- UCRS.new
+AllDataOut2.df <- SpatialPointsDataFrame(AllDataOut2.df, AllDataOut.df)
+suppressWarnings(writeOGR(AllDataOut2.df,paste0(getwd(),"/Output/Shapefiles"),paste0("AllDataOut_AllPoints"), driver="ESRI Shapefile", overwrite_layer = TRUE));
+message("Shapfile successfully exported...");
+Sys.sleep(2);
+
+print(" End Script - Auto close in 5 secs...")
+#leaflet(AllDataOut2.df) %>%
+  #addProviderTiles(providers$Esri.WorldImagery) %>% addMarkers()
+  #addMarkers(clusterOptions = markerClusterOptions()) %>% saveas(paste0(getwd(),"/Output/YourNewLeafletMap.html"))
+
+
+
+
