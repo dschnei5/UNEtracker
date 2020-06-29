@@ -29,7 +29,7 @@
 # 4.0 - Fixes GPS Date and Time Problems occuring post mid 2019
 #     - Simplifies and refines script - handles stuffed up data files better
 #     - enables sourcing to run script standalone
-#     - Creates 3D steplength 
+#     - Creates 3D steplength (Still Coming)
 #     - Works with R version 3.6
 
 
@@ -41,7 +41,7 @@
 library(lubridate);
 library(rgdal);
 library(tcltk);
-library(leaflet);
+#library(leaflet);
 
 ####Functions####
 
