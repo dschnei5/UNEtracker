@@ -15,23 +15,26 @@ library(rgdal);
 
 ####Import Data####
 
-setwd(choose.dir(default = "C:\\R\\2018-10-03_GPSdataProcessingFix\\", caption = "Choose location containing only raw tracking text files"));  ###Location of Raw Tracking .TXT Files###
+setwd(choose.dir(default = "C:\\R\\UNEtracker\\", caption = "Choose location containing only raw tracking text files"));  ###Location of Raw Tracking .TXT Files###
 files <- list.files(getwd(), pattern = ".txt", ignore.case = TRUE);
 dname <- vector('list',2);
 
 ####Set your projection####
-UCRS.new <- CRS("+proj=utm +zone=56 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
+UCRS.new <- CRS("+proj=utm +zone=50 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
 
 ####Process data by file####
 
 for (i in seq(along=files)) {
-  
+  #i = 1
   dname[i] <- paste("data",i, sep = ".");
   assign(dname[[i]], read.csv(files[i], header = FALSE));
   tmp1.df <- get(dname[[i]]);
   GGA.tmp <- subset(tmp1.df, V1=="$GPGGA");
   RMC.tmp <- subset(tmp1.df, V1=="$GPRMC");
   tmp1.df <- cbind(GGA.tmp, RMC.tmp);
+  if (length(tmp1.df[,1]) == 0) {message("File empty, moving to next file....")
+  } else {
+      
   colnames(tmp1.df) <- c("GPGGA","UTC_Time","Lat","N/S1","Long","E/W1","Fix","Satellites","HDOP","Altitude","M","g.g","M","Unknown","Tag","$GPRMC","Time2","A","Latitude","N/S2","Longitude","E/W2","Speed","Course","UTC_Date","Blank","Checksum","Unk1","Unk2","Unk3");
   assign(dname[[i]],tmp1.df[,-c(1,4,6,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30)]);
   tmp2.df <- get(dname[[i]]);
@@ -77,7 +80,7 @@ for (i in seq(along=files)) {
   tmp2.df$File <- files[i];
   tmp2.df$CollarID <- i;
   assign(dname[[i]],tmp2.df);
-  
+  }
 } #####End of i loop####
 
 ###Clean up###
