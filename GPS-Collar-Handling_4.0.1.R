@@ -124,7 +124,7 @@ saveas <- function(map, file){
 
 ####Y2K + 20 Bug Fix####
 
-#Seemingly when the collars get to "2019-04-06 20:39:45 GMT" they revert to "1999-08-22 00:32:44 GMT"#
+#Seemingly when the collars get to "2019-04-06 20:39:45 GMT" they revert to "1999-08-22 00:32:44 GMT"
 # This is a time difference of -7167.838 days, this can be refined here:
 tm.diff <- make_difftime(day = 7167.838, units = "days")
 tm.diff <- tm.diff + as.difftime("02:53:00", format = "%H:%M:%S", units = "days");
@@ -171,7 +171,7 @@ error.log <- data.frame(File = NA,
                         stringsAsFactors = FALSE);
 
 for (i in seq(along=files)) {
-  #i=1
+  #i=3
   dname[i] <- paste("data",i, sep = ".");
   suppressWarnings(assign(dname[[i]], read.csv(files[i], header = FALSE)));
   tmp1.df <- get(dname[[i]]);
@@ -246,8 +246,6 @@ bins2 <- c(0,0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.00
 Speed.ms <- AllDataOut.df$Speed;
 Speed.hist <- hist(Speed.ms, breaks=bins, plot=FALSE);
 x11(width = 10, height = 7.5);
-bins2 <- bins2[Speed.hist$counts != 0]
-Speed.hist$counts <- Speed.hist$counts[Speed.hist$counts != 0]
 bp <- barplot(Speed.hist$counts, log="y", col="white", names.arg=bins2);
 text(bp, Speed.hist$counts, labels=Speed.hist$counts, pos=3, cex=0.5);
 rm(bins,bins2,Speed.hist,Speed.ms,bp);
@@ -286,10 +284,6 @@ message("Shapfile successfully exported...");
 Sys.sleep(2);
 
 print(" End Script - Auto close in 5 secs...")
-Sys.sleep(5);
-# leaflet(AllDataOut2.df) %>%
-#   addProviderTiles(providers$Esri.WorldImagery) %>% addMarkers()
-#   addMarkers(clusterOptions = markerClusterOptions()) %>% saveas(paste0(getwd(),"/Output/YourNewLeafletMap.html"))
-
-
-
+#leaflet(AllDataOut2.df) %>%
+#addProviderTiles(providers$Esri.WorldImagery) %>% addMarkers()
+#addMarkers(clusterOptions = markerClusterOptions()) %>% saveas(paste0(getwd(),"/Output/YourNewLeafletMap.html"))
