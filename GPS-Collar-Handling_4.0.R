@@ -4,23 +4,9 @@
 ####Instructions:#### 
 
 #   01 - Place raw tracking text files in a new clean folder
-#   02 - Create a new folder called "Boundary" within the clean folder above and put the paddock boundary shapefile in it
-#   03 - Set the coordinate system in the UCRS.new command below
-#   04 - Set your preferred LRI grid size below (the smaller the size the slower the script)
-#   05 - Run the script by highlighting each "Part" separately and pressing "Run" in R Studio for parts 1 and 2
-#   06 - Choose the correct files when prompted
-#   07 - Don't run all of part 3 until you have used the first part to customise the saga batch file
-#   08 - Change the travelling threshold manually if need be after witnessing histogram (camping threshold determined autonomously)
-#   09 - Run the remainder of part three by highlighting and pressing "Run"
-#   10 - Locate your final output data under the original clean folder
-#   11 - Don't rerun unless you've 1st deleted all script generated output or moved raw files to a new clean folder
-
+#   02 - Source this script and follow the prompts
 
 ####Version History####
-
-# 1.0 - Comes from DezAutoGPSCollarScript-WithSpeedModelling-1.2.R
-#     - All errors with creating spatial variables resolved!
-# 1.1 - Added a new histogram function
 
 # 3.0 - Adapted from GPS Collar Handling 2.0
 #     - Fixes timestamp issue
