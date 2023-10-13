@@ -127,7 +127,7 @@ saveas <- function(map, file){
 #Seemingly when the collars get to "2019-04-06 20:39:45 GMT" they revert to "1999-08-22 00:32:44 GMT"
 # This is a time difference of -7167.838 days, this can be refined here:
 tm.diff <- make_difftime(day = 7167.838, units = "days")
-tm.diff <- tm.diff + as.difftime("02:53:00", format = "%H:%M:%S", units = "days");
+tm.diff <- tm.diff + as.difftime("03:53:00", format = "%H:%M:%S", units = "days");
 
 ####Set WD and check for data####
 
